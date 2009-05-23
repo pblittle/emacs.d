@@ -15,7 +15,7 @@
 ;; (color-theme-snowish)
 ;; (color-theme-marquardt)
 ;; (color-theme-clarity) ; dark
-;; (color-theme-dark-laptop) ; dark
+(color-theme-dark-laptop) ; dark
 ;; (color-theme-billw) ; dark
 ;; (color-theme-oswald) ; dark
 ;; (color-theme-zenburn) ; dark, low contrast
