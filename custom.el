@@ -43,7 +43,7 @@
  '(inhibit-startup-screen t)
  '(make-backup-files nil)
  '(mouse-yank-at-point t)
- '(org-agenda-files (quote ("~/Documents/general.org" "~/Projects/rails-runit/TODO" "~/.emacs.d/TODO" "~/Projects/racetempo.org" "~/Projects/autoscout/as24.org" "~/Projects/looktothestars-admin/ltts.org" "~/Projects/sproglogs-admin/sproglogs.org")))
+ '(org-agenda-files (quote ("~/Documents/general.org" "~/.emacs.d/TODO")))
  '(org-agenda-include-diary t)
  '(org-agenda-ndays 14)
  '(org-agenda-window-setup (quote current-window))
@@ -74,11 +74,11 @@
  '(truncate-partial-width-windows nil)
  '(visible-bell t)
  '(whitespace-check-indent-whitespace t)
- '(whitespace-display-in-modeline nil)
- '(whitespace-display-spaces-in-color nil)
+ '(whitespace-display-in-modeline t)    
+ '(whitespace-display-spaces-in-color t)
  '(whitespace-errbuf "*Messages*")
  '(whitespace-global-mode t)
- '(whitespace-silent t))
+ '(whitespace-silent nil))
 (custom-set-faces
   ;; custom-set-faces was added by Custom.
   ;; If you edit it by hand, you could mess it up, so be careful.
