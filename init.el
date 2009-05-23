@@ -3,19 +3,19 @@
 ;;----------------------------------------------------------------------------
 ;; Which functionality to enable (use t or nil for true and false)
 ;;----------------------------------------------------------------------------
-(setq *vi-emulation-support-enabled* t) ; "viper-mode"
-(setq *haskell-support-enabled* t)
+(setq *vi-emulation-support-enabled* nil) ; "viper-mode"
+(setq *haskell-support-enabled* nil)
 (setq *ocaml-support-enabled* t)
 (setq *common-lisp-support-enabled* t)
 (setq *clojure-support-enabled* t)
 (setq *scheme-support-enabled* t)
 (setq *macbook-pro-support-enabled* t)
-(setq *erlang-support-enabled* t)
-(setq *darcs-support-enabled* t)
+(setq *erlang-support-enabled* nil)
+(setq *darcs-support-enabled* nil)
 (setq *rails-support-enabled* t)
-(setq *spell-check-support-enabled* nil)
+(setq *spell-check-support-enabled* t)
 (setq *byte-code-cache-enabled* nil)
-(setq *twitter-support-enabled* nil)
+(setq *twitter-support-enabled* t)
 (setq *snippet-support-enabled* nil)
 (setq *is-a-mac* (eq system-type 'darwin))
 (setq *is-carbon-emacs* (and *is-a-mac* (eq window-system 'mac)))
@@ -345,7 +345,7 @@ in `exec-path', or nil if no such command exists"
 ;;----------------------------------------------------------------------------
 ;; Highlight URLs in comments/strings
 ;;----------------------------------------------------------------------------
-(add-hook 'find-file-hooks 'goto-address-prog-mode)
+;; (add-hook 'find-file-hooks 'goto-address-prog-mode)
 
 
 ;;----------------------------------------------------------------------------
