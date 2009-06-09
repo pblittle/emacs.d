@@ -261,6 +261,12 @@
 ;;  `anything-su-or-sudo'
 ;;    What command to use for root access.
 ;;    default = "su"
+;;  `anything-for-files-prefered-list'
+;;    Your prefered sources to find files with `anything-for-files'.
+;;    default = (quote (anything-c-source-ffap-line anything-c-source-ffap-guesser anything-c-source-recentf anything-c-source-buffers+ anything-c-source-bookmarks ...))
+;;  `anything-info-at-point-prefered-list'
+;;    Your favorites info sources to find infos with `anything-info-at-point'.
+;;    default = (quote (anything-c-source-info-elisp anything-c-source-info-cl anything-c-source-info-pages))
 ;;  `anything-create--actions-private'
 ;;    User defined actions for `anything-create' / `anything-c-source-create'.
 ;;    default = nil
@@ -402,27 +408,37 @@ they will be displayed with face `file-name-shadow' if
   :type 'string
   :group 'anything-config)
 
+(defcustom anything-for-files-prefered-list '(anything-c-source-ffap-line
+                                              anything-c-source-ffap-guesser
+                                              anything-c-source-recentf
+                                              anything-c-source-buffers+
+                                              anything-c-source-bookmarks
+                                              anything-c-source-file-cache
+                                              anything-c-source-files-in-current-dir+
+                                              anything-c-source-locate)
+  "Your prefered sources to find files with `anything-for-files'."
+  :type 'list
+  :group 'anything-config)
+
+(defcustom anything-info-at-point-prefered-list '(anything-c-source-info-elisp
+                                                  anything-c-source-info-cl
+                                                  anything-c-source-info-pages)
+  "Your favorites info sources to find infos with `anything-info-at-point'."
+  :type 'list
+  :group 'anything-config)
+  
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Preconfigured Anything ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun anything-for-files ()
   "Preconfigured `anything' for opening files.
 ffap -> recentf -> buffer -> bookmark -> file-cache -> files-in-current-dir -> locate"
   (interactive)
-  (anything '(anything-c-source-ffap-line
-              anything-c-source-ffap-guesser
-              anything-c-source-recentf
-              anything-c-source-buffers+
-              anything-c-source-bookmarks
-              anything-c-source-file-cache
-              anything-c-source-files-in-current-dir+
-              anything-c-source-locate)))
+  (anything anything-for-files-prefered-list))
 
 (defun anything-info-at-point ()
   "Preconfigured `anything' for searching info at point."
   (interactive)
-  (anything '(anything-c-source-info-elisp
-              anything-c-source-info-cl
-              anything-c-source-info-pages)
+  (anything anything-info-at-point-prefered-list
             (thing-at-point 'symbol)))
 
 (defun anything-show-kill-ring ()
@@ -900,7 +916,8 @@ buffer that is not the current buffer."
     (candidates . anything-c-buffer-list)
     (volatile)
     (type . buffer)
-    (candidate-transformer anything-c-highlight-buffers
+    (candidate-transformer anything-c-skip-current-buffer
+                           anything-c-highlight-buffers
                            anything-c-skip-boring-buffers)
     (persistent-action . anything-c-buffers+-persistent-action)))
 
@@ -1936,6 +1953,9 @@ utility mdfind.")
 
 ;;;; <icicle>
 ;;; Icicle regions
+;; See: http://www.emacswiki.org/emacs-en/Icicles_-_Multiple_Regions 
+;; That is the anything interface.
+
 (defvar anything-icicle-region-alist nil)
 (defvar anything-c-source-icicle-region
   '((name . "Icicle Regions")
@@ -1953,52 +1973,39 @@ utility mdfind.")
                                                  (setq reg (buffer-substring (mark) (point))))
                                                (insert reg))))
                ("Remove region" . anything-c-icicle-region-delete-region)
-               ("Update" . anything-icicle-region-update)))))
+               ("Update" . (lambda (elm)
+                             (icicle-purge-bad-file-regions)))))))
 
 ;; (anything 'anything-c-source-icicle-region)
 
-(defun anything-icicle-region-update (elm)
-  "Remove entries in `icicle-region-alist' if files doesn't exists anymore."
-  (loop
-     for i in icicle-region-alist
-     when (and (caddr i)
-               (not (file-exists-p (caddr i))))
-     do
-       (let ((pos (position i icicle-region-alist)))
-         (anything-icicle-delete-region-from-alist pos))))
-
 (defun anything-icicle-select-region-action (pos)
-  "Action function for `icicle-select-region'."
-  (let* ((reg   (nth pos icicle-region-alist))
-         (buf   (cadr reg))
-         (file  (caddr reg)))
-    (when (and (not (get-buffer buf))
-               file) ; If no buffer, try to open the file.  If no file, msg.
-      (if (file-readable-p file)
-          (find-file-noselect file)
-          (message "No such file: `%s'" file)))
-    (when (get-buffer buf)
-      (pop-to-buffer buf)
-      (raise-frame)
-      (goto-char (cadr (cddr reg)))
-      (push-mark (car (cddr (cddr reg))) 'nomsg 'activate)))
-  (setq deactivate-mark  nil))
-
+  "Go to the region at nth `pos' in `icicle-region-alist'.
+See `icicle-select-region-action'."
+  (let ((icicle-get-alist-candidate-function #'(lambda (pos)
+                                                 (nth pos icicle-region-alist))))
+    (icicle-select-region-action pos)))
 
 (defun anything-icicle-delete-region-from-alist (pos)
-  "Delete the region named REG-NAME from `icicle-region-alist'."
+  "Delete the region at nth `pos' from `icicle-region-alist'.
+See `icicle-delete-region-from-alist'."
   (let ((alist-cand  (nth pos icicle-region-alist)))
     (setq icicle-region-alist
-          (delete (cons (car alist-cand) (cdr alist-cand)) icicle-region-alist)))
+          (delete alist-cand icicle-region-alist)))
   (funcall icicle-customize-save-variable-function 'icicle-region-alist icicle-region-alist))
 
 (defun anything-c-icicle-region-goto-region (candidate)
-  (let ((pos (position candidate anything-icicle-region-alist)))
+  "Get the position of `candidate' and call `anything-icicle-select-region-action'." 
+  (let ((pos (position candidate anything-icicle-region-alist))
+        (buf (second (split-string candidate " => "))))
+    (if (equal buf "*info*")
+        (info (caddr (nth pos icicle-region-alist))))
     (anything-icicle-select-region-action pos)))
 
 (defun anything-c-icicle-region-delete-region (candidate)
+  "Get the position of `candidate' and call `anything-icicle-delete-region-from-alist'."
   (let ((pos (position candidate anything-icicle-region-alist)))
     (anything-icicle-delete-region-from-alist pos)))
+
 
 ;;;; <Kill ring>
 ;;; Kill ring
@@ -2883,10 +2890,8 @@ See also `anything-create--actions'."
                                      (font-lock-mode 1)))
                ("Run emerge pretend" . (lambda (elm)
                                          (anything-c-gentoo-eshell-action elm "emerge -p")))
-               ("Emerge" . (lambda (elm)
-                             (anything-gentoo-install elm)))
-               ("Unmerge" . (lambda (elm)
-                              (anything-gentoo-uninstall elm)))
+               ("Emerge" . anything-gentoo-install)
+               ("Unmerge" . anything-gentoo-uninstall)
                ("Show dependencies" . (lambda (elm)
                                         (anything-c-gentoo-default-action elm "equery" "-C" "d")))
                ("Show related files" . (lambda (elm)
@@ -2899,11 +2904,17 @@ See also `anything-create--actions'."
 
 (defun anything-gentoo-install (candidate)
   (funcall anything-gentoo-prefered-shell)
-  (insert (concat "sudo emerge -av " candidate)))
+  (if anything-c-marked-candidate-list
+      (let ((elms (mapconcat 'identity anything-c-marked-candidate-list " ")))
+        (insert (concat "sudo emerge -av " elms)))
+      (insert (concat "sudo emerge -av " candidate))))
 
 (defun anything-gentoo-uninstall (candidate)
   (funcall anything-gentoo-prefered-shell)
-  (insert (concat "sudo emerge -avC " candidate)))
+  (if anything-c-marked-candidate-list
+      (let ((elms (mapconcat 'identity anything-c-marked-candidate-list " ")))
+        (insert (concat "sudo emerge -avC " elms)))
+      (insert (concat "sudo emerge -avC " candidate))))
 
 (defun anything-c-gentoo-default-action (elm command &rest args)
   "Gentoo default action that use `anything-c-gentoo-buffer'."
@@ -3415,7 +3426,8 @@ other candidate transformers."
 
 (defvar anything-c-marked-candidate-list nil)
 (defadvice anything-select-action (before save-marked-candidates () activate)
-  (setq anything-c-marked-candidate-list (anything-c-list-marked-candidate)))
+  (setq anything-c-marked-candidate-list (anything-c-list-marked-candidate))
+  (anything-clear-visible-mark))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Adaptive Sorting of Candidates ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defvar anything-c-adaptive-done nil
@@ -3726,7 +3738,7 @@ If optional 2nd argument is non-nil, the file opened with `auto-revert-mode'.")
      ("Ediff Marked buffers" . anything-ediff-marked-buffers)
      ("Ediff Merge marked buffers" . (lambda (candidate)
                                        (anything-ediff-marked-buffers candidate t))))
-    (candidate-transformer . anything-c-skip-boring-buffers))
+    (candidate-transformer anything-c-skip-current-buffer anything-c-skip-boring-buffers))
   "Buffer or buffer name.")
 
 (define-anything-type-attribute 'file
@@ -3783,12 +3795,20 @@ If optional 2nd argument is non-nil, the file opened with `auto-revert-mode'.")
   "String representing S-Expressions.")
 
 (define-anything-type-attribute 'bookmark
-  '((action ("Jump to bookmark" . (lambda (candidate)
+  '((action
+     ("Jump to bookmark" . (lambda (candidate)
                                     (bookmark-jump candidate)
                                     (anything-update)))
-            ("Delete bookmark" . bookmark-delete)
-            ("Rename bookmark" . bookmark-rename)
-            ("Relocate bookmark" . bookmark-relocate)))
+     ("Jump to BM other window" . (lambda (candidate)
+                                    (bookmark-jump-other-window candidate)
+                                    (anything-update)))
+     ("Bookmark edit annotation" . (lambda (candidate)
+                                     (bookmark-edit-annotation candidate)))
+     ("Bookmark show annotation" . (lambda (candidate)
+                                     (bookmark-show-annotation candidate)))
+     ("Delete bookmark" . bookmark-delete)
+     ("Rename bookmark" . bookmark-rename)
+     ("Relocate bookmark" . bookmark-relocate)))
   "Bookmark name.")
 
 (define-anything-type-attribute 'line
