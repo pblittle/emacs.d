@@ -262,11 +262,8 @@
 ;;    What command to use for root access.
 ;;    default = "su"
 ;;  `anything-for-files-prefered-list'
-;;    Your prefered sources to find files with `anything-for-files'.
+;;    Your prefered sources to find files.
 ;;    default = (quote (anything-c-source-ffap-line anything-c-source-ffap-guesser anything-c-source-recentf anything-c-source-buffers+ anything-c-source-bookmarks ...))
-;;  `anything-info-at-point-prefered-list'
-;;    Your favorites info sources to find infos with `anything-info-at-point'.
-;;    default = (quote (anything-c-source-info-elisp anything-c-source-info-cl anything-c-source-info-pages))
 ;;  `anything-create--actions-private'
 ;;    User defined actions for `anything-create' / `anything-c-source-create'.
 ;;    default = nil
@@ -416,29 +413,31 @@ they will be displayed with face `file-name-shadow' if
                                               anything-c-source-file-cache
                                               anything-c-source-files-in-current-dir+
                                               anything-c-source-locate)
-  "Your prefered sources to find files with `anything-for-files'."
+  "Your prefered sources to find files."
   :type 'list
   :group 'anything-config)
-
-(defcustom anything-info-at-point-prefered-list '(anything-c-source-info-elisp
-                                                  anything-c-source-info-cl
-                                                  anything-c-source-info-pages)
-  "Your favorites info sources to find infos with `anything-info-at-point'."
-  :type 'list
-  :group 'anything-config)
-  
-
+ 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Preconfigured Anything ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun anything-for-files ()
   "Preconfigured `anything' for opening files.
 ffap -> recentf -> buffer -> bookmark -> file-cache -> files-in-current-dir -> locate"
   (interactive)
   (anything anything-for-files-prefered-list))
+  ;; (anything '(anything-c-source-ffap-line
+  ;;             anything-c-source-ffap-guesser
+  ;;             anything-c-source-recentf
+  ;;             anything-c-source-buffers+
+  ;;             anything-c-source-bookmarks
+  ;;             anything-c-source-file-cache
+  ;;             anything-c-source-files-in-current-dir+
+  ;;             anything-c-source-locate)))
 
 (defun anything-info-at-point ()
   "Preconfigured `anything' for searching info at point."
   (interactive)
-  (anything anything-info-at-point-prefered-list
+  (anything '(anything-c-source-info-elisp
+              anything-c-source-info-cl
+              anything-c-source-info-pages)
             (thing-at-point 'symbol)))
 
 (defun anything-show-kill-ring ()
@@ -448,8 +447,7 @@ You may bind this command to M-y."
   (anything 'anything-c-source-kill-ring nil nil nil nil "*anything kill-ring*"))
 
 (defun anything-minibuffer-history ()
-  "Show `minibuffer-history'.
-You may bind this command to C-r in minibuffer-local-map / minibuffer-local-completion-map."
+  "Show `minibuffer-history'."
   (interactive)
   (anything 'anything-c-source-minibuffer-history nil nil nil nil
             "*anything minibuffer-history*"))
@@ -682,6 +680,17 @@ The output is sexps which are evaluated by \\[eval-last-sexp]."
     (pop-to-buffer standard-output)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Utilities Functions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; For compatibility
+(unless (fboundp 'region-active-p)
+  (defun region-active-p ()
+    "Return t if Transient Mark mode is enabled and the mark is active.
+
+Most commands that act on the region if it is active and
+Transient Mark mode is enabled, and on the text near point
+otherwise, should use `use-region-p' instead.  That function
+checks the value of `use-empty-active-region' as well."
+    (and transient-mark-mode mark-active)))
+
 (defun anything-nest (&rest same-as-anything)
   "Nested `anything'. If you use `anything' within `anything', use it."
   (with-selected-window (anything-window)
@@ -1421,11 +1430,51 @@ http://www.nongnu.org/bm/")
         collect (propertize i 'face anything-c-bookmarks-face3)))
 
 (defun anything-c-highlight-bookmark (files)
+  "Colors mean:
+Grey ==> non--buffer-filename with saved region or not.
+Yellow ==> w3m url with saved region.
+Green ==> info buffer with saved region.
+Blue ==> regular file with maybe a region saved.
+RedOnWhite ==> Directory."
   (loop for i in files
-        if (file-directory-p (bookmark-get-filename i))
-        collect (propertize i 'face anything-c-bookmarks-face1)
-        else
-        collect (propertize i 'face anything-c-bookmarks-face2)))
+     for pred = (bookmark-get-filename i)
+     for bufp = (and (fboundp 'bookmark-get-buffername)
+                     (bookmark-get-buffername i))
+     for regp = (and (fboundp 'bookmark-get-endposition)
+                     (bookmark-get-endposition i))
+     for handlerp = (and (fboundp 'bookmark-get-handler)
+                         (bookmark-get-handler i))
+     if (and pred ;; directories
+             (file-directory-p pred))
+     collect (propertize i 'face anything-c-bookmarks-face1)
+     if (and pred ;; regular files
+             (not (file-directory-p pred))
+             (file-exists-p pred)
+             (not regp))
+     collect (propertize i 'face anything-c-bookmarks-face2)
+     if (and pred ;; regular files with regions saved
+             (not (file-directory-p pred))
+             (file-exists-p pred)
+             regp)
+     collect (propertize i 'face '((:foreground "Indianred2")))
+     if (and (fboundp 'bookmark-get-buffername) ;; buffer non--filename
+             bufp
+             (not pred))
+     collect (propertize i 'face '((:foreground "grey")))
+     if (and (fboundp 'bookmark-get-buffername) ;; w3m buffers
+             (string= bufp "*w3m*")
+             (when pred
+               (not (file-exists-p pred))))
+     collect (propertize i 'face '((:foreground "yellow")))
+     if (and (fboundp 'bookmark-get-buffername) ;; info buffers
+             (or
+              (eq handlerp 'Info-bookmark-jump)
+              (and
+               (string= bufp "*info*")
+               (when pred
+                 (not (file-exists-p pred))))))
+     collect (propertize i 'face '((:foreground "green")))))
+       
 
 (defvar anything-c-source-bookmarks-local
   '((name . "Bookmarks-Local")
@@ -2818,11 +2867,14 @@ See also `anything-create--actions'."
 (defvar anything-c-source-minibuffer-history
   '((name . "Minibuffer History")
     (header-name . (lambda (name) (format "%s (%s)" name minibuffer-history-variable)))
-    (candidates . (lambda () (symbol-value minibuffer-history-variable)))
+    (candidates . (lambda () (let ((history (symbol-value minibuffer-history-variable)))
+                               (if (consp (car history))
+                                   (mapcar 'prin1-to-string history)
+                                 history))))
     (migemo)
     (action . insert)))
-
 ;; (anything 'anything-c-source-minibuffer-history)
+
 ;;;; <System>
 
 ;;; X RandR resolution change
@@ -3322,10 +3374,9 @@ file.  Else return ACTIONS unmodified."
 
 (defun anything-c-transform-file-browse-url (actions candidate)
   "Add an action to browse the file CANDIDATE if it in a html
-file.  Else return ACTIONS unmodified."
-  (if (or (string= (file-name-extension candidate) "htm")
-          (string= (file-name-extension candidate) "html"))
-      (append actions '(("Browse with Browser" . browse-url)))
+file or URL.  Else return ACTIONS unmodified."
+  (if (string-match "^http\\|^ftp\\|html?$" candidate)
+      (cons '("Browse with Browser" . browse-url) actions )
     actions))
 
 ;;;; Function
@@ -3797,8 +3848,17 @@ If optional 2nd argument is non-nil, the file opened with `auto-revert-mode'.")
 (define-anything-type-attribute 'bookmark
   '((action
      ("Jump to bookmark" . (lambda (candidate)
-                                    (bookmark-jump candidate)
-                                    (anything-update)))
+                             (bookmark-jump candidate)
+                             (anything-update)
+                             (condition-case nil
+                                 (when bookmark-use-region
+                                   (let ((bmk-name (or (bookmark-get-buffername candidate)
+                                                       (file-name-nondirectory
+                                                        (bookmark-get-filename candidate)))))
+                                     (when bmk-name
+                                       (with-current-buffer bmk-name
+                                         (setq deactivate-mark nil)))))
+                               (error nil))))
      ("Jump to BM other window" . (lambda (candidate)
                                     (bookmark-jump-other-window candidate)
                                     (anything-update)))
