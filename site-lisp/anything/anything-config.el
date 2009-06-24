@@ -151,6 +151,7 @@
 ;;     `anything-c-source-minibuffer-history' (Minibuffer History)
 ;;  System:
 ;;     `anything-c-source-xrandr-change-resolution' (Change Resolution)
+;;     `anything-c-source-xfonts'                   (X Fonts)
 ;;     `anything-c-source-gentoo'                   (Portage sources)
 ;;     `anything-c-source-use-flags'                (Use Flags)
 ;;     `anything-c-source-emacs-process'            (Emacs Process)
@@ -171,6 +172,8 @@
 ;;    Start anything with only gentoo sources.
 ;;  `anything-surfraw-only'
 ;;    Launch only anything-surfraw.
+;;  `anything-imenu'
+;;    Show `imenu'.
 ;;  `anything-kill-buffers'
 ;;    You can continuously kill buffer you selected.
 ;;  `anything-query-replace-regexp'
@@ -263,7 +266,7 @@
 ;;    default = "su"
 ;;  `anything-for-files-prefered-list'
 ;;    Your prefered sources to find files.
-;;    default = (quote (anything-c-source-ffap-line anything-c-source-ffap-guesser anything-c-source-recentf anything-c-source-buffers+ anything-c-source-bookmarks ...))
+;;    default = (quote (anything-c-source-ffap-line anything-c-source-ffap-guesser anything-c-source-buffers+ anything-c-source-recentf anything-c-source-bookmarks ...))
 ;;  `anything-create--actions-private'
 ;;    User defined actions for `anything-create' / `anything-c-source-create'.
 ;;    default = nil
@@ -407,8 +410,8 @@ they will be displayed with face `file-name-shadow' if
 
 (defcustom anything-for-files-prefered-list '(anything-c-source-ffap-line
                                               anything-c-source-ffap-guesser
-                                              anything-c-source-recentf
                                               anything-c-source-buffers+
+                                              anything-c-source-recentf
                                               anything-c-source-bookmarks
                                               anything-c-source-file-cache
                                               anything-c-source-files-in-current-dir+
@@ -449,8 +452,9 @@ You may bind this command to M-y."
 (defun anything-minibuffer-history ()
   "Show `minibuffer-history'."
   (interactive)
-  (anything 'anything-c-source-minibuffer-history nil nil nil nil
-            "*anything minibuffer-history*"))
+  (let ((enable-recursive-minibuffers t))
+    (anything 'anything-c-source-minibuffer-history nil nil nil nil
+              "*anything minibuffer-history*")))
 
 (dolist (map (list minibuffer-local-filename-completion-map
                    minibuffer-local-completion-map
@@ -489,6 +493,11 @@ With two prefix args allow choosing in which symbol to search."
           (setq pattern (replace-regexp-in-string "\n" "" pattern))
           (anything 'anything-c-source-surfraw pattern))
         (anything 'anything-c-source-surfraw))))
+
+(defun anything-imenu ()
+  "Show `imenu'."
+  (interactive)
+  (anything 'anything-c-source-imenu nil nil nil nil "*anything imenu*"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Anything Applications ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; kill buffers
@@ -1441,7 +1450,9 @@ RedOnWhite ==> Directory."
      for bufp = (and (fboundp 'bookmark-get-buffername)
                      (bookmark-get-buffername i))
      for regp = (and (fboundp 'bookmark-get-endposition)
-                     (bookmark-get-endposition i))
+                     (bookmark-get-endposition i)
+                     (/= (bookmark-get-position i)
+                         (bookmark-get-endposition i)))
      for handlerp = (and (fboundp 'bookmark-get-handler)
                          (bookmark-get-handler i))
      if (and pred ;; directories
@@ -1467,12 +1478,8 @@ RedOnWhite ==> Directory."
                (not (file-exists-p pred))))
      collect (propertize i 'face '((:foreground "yellow")))
      if (and (fboundp 'bookmark-get-buffername) ;; info buffers
-             (or
-              (eq handlerp 'Info-bookmark-jump)
-              (and
-               (string= bufp "*info*")
-               (when pred
-                 (not (file-exists-p pred))))))
+             (eq handlerp 'Info-bookmark-jump)
+             (string= bufp "*info*"))
      collect (propertize i 'face '((:foreground "green")))))
        
 
@@ -2899,7 +2906,26 @@ See also `anything-create--actions'."
                                             "--mode" mode))))))
 ;; (anything 'anything-c-source-xrandr-change-resolution)
 
+;;; Xfont selection
+(defun anything-c-persistent-xfont-action (elm)
+  "Show current font temporarily"
+  (let ((default-font elm))
+    (set-default-font default-font)))
 
+(defvar anything-c-source-xfonts
+  '((name . "X Fonts")
+    (candidates . (lambda ()
+                    (x-list-fonts "*")))
+    (multiline)
+    (action . (("Copy to kill ring" . (lambda (elm)
+                                        (kill-new elm)))
+               ("Set Font" . (lambda (elm)
+                               (kill-new elm)
+                               (set-default-font elm 'keep-size)
+                               (message "New font have been copied to kill ring")))))
+    (persistent-action . anything-c-persistent-xfont-action)))
+  
+;; (anything 'anything-c-source-xfonts)
 
 ;; Sources for gentoo users
 
@@ -3480,6 +3506,9 @@ other candidate transformers."
   (setq anything-c-marked-candidate-list (anything-c-list-marked-candidate))
   (anything-clear-visible-mark))
 
+(defadvice anything-toggle-visible-mark (after move-to-next-line () activate)
+  (anything-next-line))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Adaptive Sorting of Candidates ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defvar anything-c-adaptive-done nil
   "nil if history information is not yet stored for the current
@@ -3763,12 +3792,30 @@ If optional 2nd argument is non-nil, the file opened with `auto-revert-mode'.")
     (anything-c-delete-file i)))
 
 (defun anything-ediff-marked-buffers (candidate &optional merge)
-  (when (eq (length anything-c-marked-candidate-list) 2)
-    (let ((buf1 (first anything-c-marked-candidate-list))
-          (buf2 (second anything-c-marked-candidate-list)))
-      (if merge
-          (ediff-merge-buffers buf1 buf2)
-          (ediff-buffers buf1 buf2)))))
+  (let ((lg-lst (length anything-c-marked-candidate-list))
+        buf1 buf2)
+    (case lg-lst
+      (0
+       (error "Error:You have to mark at least 1 buffer"))
+      (1
+       (setq buf1 anything-current-buffer
+             buf2 (first anything-c-marked-candidate-list)))
+      (2 
+       (setq buf1 (first anything-c-marked-candidate-list)
+             buf2 (second anything-c-marked-candidate-list)))
+      (t
+       (error "Error:To much buffers marked!")))
+    (if merge
+        (ediff-merge-buffers buf1 buf2)
+        (ediff-buffers buf1 buf2))))
+
+(defun anything-delete-marked-bookmarks (elm)
+  (anything-aif anything-c-marked-candidate-list
+      (progn
+        (dolist (i it)
+          (bookmark-delete i 'batch))
+        (bookmark-save))
+    (bookmark-delete elm)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Setup ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -3866,7 +3913,7 @@ If optional 2nd argument is non-nil, the file opened with `auto-revert-mode'.")
                                      (bookmark-edit-annotation candidate)))
      ("Bookmark show annotation" . (lambda (candidate)
                                      (bookmark-show-annotation candidate)))
-     ("Delete bookmark" . bookmark-delete)
+     ("Delete bookmark" . anything-delete-marked-bookmarks)
      ("Rename bookmark" . bookmark-rename)
      ("Relocate bookmark" . bookmark-relocate)))
   "Bookmark name.")
