@@ -3,7 +3,7 @@
 (setq interpreter-mode-alist
       (cons '("ruby" . ruby-mode) interpreter-mode-alist))
 
-(add-auto-mode 'ruby-mode "\\.rb$" "Rakefile$" "\.rake$" "\.rxml$" "\.rjs" ".irbrc")
+(add-auto-mode 'ruby-mode "\\.rb$" "Rakefile$" "\.rake$" "\.rxml$" "\.rjs" ".irbrc" "\.builder")
 
 
 (autoload 'run-ruby "inf-ruby" "Run an inferior Ruby process")
@@ -51,7 +51,7 @@
 ;;----------------------------------------------------------------------------
 ;; Ruby - erb
 ;;----------------------------------------------------------------------------
-(add-auto-mode 'html-mode "\.rhtml$")
+(add-auto-mode 'html-mode "\.rhtml$" "\.html\.erb$")
 (eval-after-load "mmm-vars"
   '(progn
      (mmm-add-classes
