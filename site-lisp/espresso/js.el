@@ -1808,7 +1808,7 @@ returns nil."
              (if (looking-at "[({[]\\s-*\\(/[/*]\\|$\\)")
                  (progn
                    (skip-syntax-backward " ")
-                   (when (= (char-before) ?\)) (backward-list))
+                   (when (eq (char-before) ?\)) (backward-list))
                    (back-to-indentation)
                    (cond (same-indent-p
                           (current-column))
@@ -3349,8 +3349,8 @@ Key bindings:
        #'js--which-func-joiner)
 
   ;; Comments
-  (setq comment-start "// ")
-  (setq comment-end "")
+  (set (make-local-variable 'comment-start) "// ")
+  (set (make-local-variable 'comment-end) "")
   (set (make-local-variable 'fill-paragraph-function)
        'js-c-fill-paragraph)
 
