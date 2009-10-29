@@ -1,6 +1,6 @@
 (defvar preferred-javascript-mode 'js2-mode)
 (defvar preferred-javascript-mode-hook 'js2-mode-hook)
-(defvar preferred-mmm-javascript-mode 'espresso-mode)
+(defvar preferred-mmm-javascript-mode 'js-mode)
 (defvar preferred-javascript-indent-level 2)
 
 ;; Need to first remove from list if present, since elpa adds entries too, which
@@ -19,14 +19,15 @@
 
 
 ;; js2-mode
+(autoload 'js2-mode "js2-mode" "Steve Yegge's javascript IDE mode")
 (setq js2-use-font-lock-faces t)
 (setq js2-mode-must-byte-compile nil)
 (setq js2-basic-offset preferred-javascript-indent-level)
 
 
-;; espresso-mode
-(autoload 'espresso-mode "espresso" "An enhanced version of javascript-mode")
-(setq espresso-indent-level preferred-javascript-indent-level)
+;; js-mode
+(autoload 'js-mode "js" "An enhanced version of javascript-mode")
+(setq js-indent-level preferred-javascript-indent-level)
 
 
 ;; standard javascript-mode
