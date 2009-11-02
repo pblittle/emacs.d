@@ -98,7 +98,7 @@ in `exec-path', or nil if no such command exists"
   (eval-after-load "woman"
     '(setq woman-manpath (append (list "/opt/local/man") woman-manpath)))
   (dolist (dir (mapcar 'expand-file-name '("/usr/local/bin" "/opt/local/bin"
-                                           "/opt/local/lib/postgresql83/bin" "~/bin")))
+                                           "/opt/local/lib/postgresql84/bin" "~/bin")))
     (setenv "PATH" (concat dir ":" (getenv "PATH")))
     (setq exec-path (append (list dir) exec-path))))
 
@@ -209,6 +209,13 @@ in `exec-path', or nil if no such command exists"
   ;; Use Apple-w to close current buffer on OS-X (is normally bound to kill-ring-save)
   (when *vi-emulation-support-enabled*
     (global-set-key [(meta w)] 'kill-this-buffer)))
+
+
+;;----------------------------------------------------------------------------
+;; Suppress GUI features
+;;----------------------------------------------------------------------------
+(setq use-file-dialog nil)
+(setq use-dialog-box nil)
 
 
 ;;----------------------------------------------------------------------------

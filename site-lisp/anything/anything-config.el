@@ -300,6 +300,9 @@
 ;;  `anything-allow-skipping-current-buffer'
 ;;    Show current buffer or not in anything buffer
 ;;    default = t
+;;  `anything-c-enable-eval-defun-hack'
+;;    *If non-nil, execute `anything' using the source at point when C-M-x is pressed.
+;;    default = t
 
 ;;; Change log:
 ;;
@@ -461,6 +464,12 @@ It is prepended to predefined pairs."
 
 (defcustom anything-allow-skipping-current-buffer t
   "Show current buffer or not in anything buffer"
+  :type 'boolean
+  :group 'anything-config)
+
+(defcustom anything-c-enable-eval-defun-hack t
+  "*If non-nil, execute `anything' using the source at point when C-M-x is pressed.
+This hack is invoked when pressing C-M-x in the form (defvar anything-c-source-XXX ...) or (setq anything-c-source-XXX ...)."
   :type 'boolean
   :group 'anything-config)
 
@@ -924,6 +933,19 @@ It is cleared after executing action.")
           (lambda () (setq anything-current-prefix-arg nil)))
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Hacks ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defadvice eval-defun (after anything-source-hack activate)
+  "See `anything-c-enable-eval-defun-hack'."
+  (when anything-c-enable-eval-defun-hack
+    (let ((varsym (save-excursion
+                    (beginning-of-defun)
+                    (forward-char 1)
+                    (when (memq (read (current-buffer)) '(defvar setq))
+                      (read (current-buffer))))))
+      (when (string-match "^anything-c-source-" (symbol-name varsym))
+        (anything varsym)))))
+;; (progn (ad-disable-advice 'eval-defun 'after 'anything-source-hack) (ad-update 'eval-defun))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; Document Generator ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun anything-c-create-summary ()
   "Create `anything' summary."
@@ -1067,9 +1089,10 @@ buffer that is not the current buffer."
 ;;; Files in current dir
 (defvar anything-c-source-files-in-current-dir
   '((name . "Files from Current Directory")
-    (init . (lambda () (setq anything-c-default-directory default-directory)))
-    (candidates . (lambda () (directory-files anything-c-default-directory)))
-    (volatile)
+    (candidates . (lambda ()
+                    (with-current-buffer anything-current-buffer
+                      (directory-files default-directory))))
+    ;; volatile is not needed, I think.
     (type . file)))
 ;; (anything 'anything-c-source-files-in-current-dir)
 
@@ -1089,14 +1112,11 @@ buffer that is not the current buffer."
 
 (defvar anything-c-source-files-in-current-dir+
   '((name . "Files from Current Directory")
-    (init . (lambda ()
-              (setq anything-c-default-directory
-                    (expand-file-name default-directory))))
     (candidates . (lambda ()
-                    (directory-files
-                     anything-c-default-directory t)))
+                    (with-current-buffer anything-current-buffer
+                      (directory-files default-directory t))))
     (candidate-transformer anything-c-highlight-files)
-    (volatile)
+    ;; volatile is not needed, I think.
     (type . file)))
 
 ;; (anything 'anything-c-source-files-in-current-dir+)
@@ -3327,8 +3347,8 @@ See also `anything-create--actions'."
                    ('install "sudo emerge -av ")
                    ('uninstall "sudo emerge -avC ")
                    (t (error "Unknow action")))))
-  (if anything-c-marked-candidate-list
-      (let ((elms (mapconcat 'identity anything-c-marked-candidate-list " ")))
+  (if (anything-marked-candidates)
+      (let ((elms (mapconcat 'identity (anything-marked-candidates) " ")))
         (insert (concat command elms)))
       (insert (concat command candidate)))))
 
@@ -3461,11 +3481,8 @@ See also `anything-create--actions'."
 
 (defvar anything-c-source-emacs-process
   '((name . "Emacs Process")
-    (candidates . (lambda ()
-                    (mapcar #'process-name
-                            (process-list))))
-    (action . (("Kill Process" . (lambda (elm)
-                                   (delete-process (get-process elm))))))))
+    (candidates . (lambda () (mapcar #'process-name (process-list))))
+    (action ("Kill Process" . (lambda (elm) (delete-process (get-process elm)))))))
 
 ;; (anything 'anything-c-source-emacs-process)
 
@@ -3751,7 +3768,7 @@ file.  Else return ACTIONS unmodified."
 (defun anything-c-transform-file-browse-url (actions candidate)
   "Add an action to browse the file CANDIDATE if it in a html
 file or URL.  Else return ACTIONS unmodified."
-  (if (string-match "^http\\|^ftp\\|html?$" candidate)
+  (if (string-match "^http\\|^ftp\\|\\.html?$" candidate)
       (cons '("Browse with Browser" . browse-url) actions )
     actions))
 
@@ -4112,31 +4129,31 @@ If optional 2nd argument is non-nil, the file opened with `auto-revert-mode'.")
       (revert-buffer t t))))
 
 (defun anything-revert-marked-buffers (candidate)
-  (dolist (i anything-c-marked-candidate-list)
+  (dolist (i (anything-marked-candidates))
     (anything-revert-buffer i)))
 
 (defun anything-kill-marked-buffers (candidate)
-  (dolist (i anything-c-marked-candidate-list)
+  (dolist (i (anything-marked-candidates))
     (kill-buffer i)))
 
 (defun anything-delete-marked-files (candidate)
-  (dolist (i anything-c-marked-candidate-list)
+  (dolist (i (anything-marked-candidates))
     (anything-c-delete-file i)))
 
 (defun anything-ediff-marked-buffers (candidate &optional merge)
   "Ediff 2 marked buffers or 1 marked buffer and current-buffer.
 With optional arg `merge' call `ediff-merge-buffers'."
-  (let ((lg-lst (length anything-c-marked-candidate-list))
+  (let ((lg-lst (length (anything-marked-candidates)))
         buf1 buf2)
     (case lg-lst
       (0
        (error "Error:You have to mark at least 1 buffer"))
       (1
        (setq buf1 anything-current-buffer
-             buf2 (first anything-c-marked-candidate-list)))
+             buf2 (first (anything-marked-candidates))))
       (2 
-       (setq buf1 (first anything-c-marked-candidate-list)
-             buf2 (second anything-c-marked-candidate-list)))
+       (setq buf1 (first (anything-marked-candidates))
+             buf2 (second (anything-marked-candidates))))
       (t
        (error "Error:To much buffers marked!")))
     (if merge
@@ -4156,7 +4173,7 @@ Return nil if bmk is not a valid bookmark."
 (defun anything-delete-marked-bookmarks (elm)
   "Delete this bookmark or all marked bookmarks."
   (let ((bookmark (anything-bookmark-get-bookmark-from-name elm)))
-    (anything-aif anything-c-marked-candidate-list
+    (anything-aif (anything-marked-candidates)
         (dolist (i it)
           (let ((bmk (anything-bookmark-get-bookmark-from-name i)))
             (bookmark-delete bmk 'batch)))
