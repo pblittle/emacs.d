@@ -11,4 +11,8 @@ CVS
 /TODO
 /anything-c-adaptive-history
 /.org-id-locations
+<<<<<<< HEAD:.gitignore
 .twitter
+=======
+cookies
+>>>>>>> 7dd1cd7e40467944bf8f13976704dfcd875aa62c:.gitignore

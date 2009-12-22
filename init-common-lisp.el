@@ -10,9 +10,9 @@
 (eval-after-load "slime"
   '(progn
      (add-to-list 'slime-lisp-implementations
-		  '((sbcl ("sbcl") :coding-system utf-8-unix)))
+		  '(sbcl ("sbcl") :coding-system utf-8-unix))
      (add-to-list 'slime-lisp-implementations
-		  '((cmucl ("cmucl") :coding-system iso-latin-1-unix)))
+		  '(cmucl ("cmucl") :coding-system iso-latin-1-unix))
      (add-to-list 'load-path (concat (directory-of-library "slime") "/contrib"))
      (add-hook 'slime-mode-hook 'pretty-lambdas)
      (add-hook 'slime-mode-hook (lambda () (enable-paredit slime-mode-map)))))
@@ -44,9 +44,9 @@
 
 (define-key lisp-mode-map (kbd "C-c l") 'lispdoc)
 
-(autoload 'redshank-mode "redshank" "Minor mode for editing and refactoring (Common) Lisp code." t)
-(autoload 'turn-on-redshank-mode "redshank" "Turn on Redshank mode. Please see function `redshank-mode'." t)
-(add-hook 'lisp-mode-hook 'turn-on-redshank-mode)
+;(autoload 'redshank-mode "redshank" "Minor mode for editing and refactoring (Common) Lisp code." t)
+;(autoload 'turn-on-redshank-mode "redshank" "Turn on Redshank mode. Please see function `redshank-mode'." t)
+;(add-hook 'lisp-mode-hook 'turn-on-redshank-mode)
 
 
 (provide 'init-common-lisp)

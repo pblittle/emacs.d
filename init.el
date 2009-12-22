@@ -15,8 +15,7 @@
 (setq *rails-support-enabled* t)
 (setq *spell-check-support-enabled* t)
 (setq *byte-code-cache-enabled* nil)
-(setq *twitter-support-enabled* t)
-(setq *snippet-support-enabled* nil)
+(setq *twitter-support-enabled* nil)
 (setq *is-a-mac* (eq system-type 'darwin))
 (setq *is-carbon-emacs* (and *is-a-mac* (eq window-system 'mac)))
 (setq *is-cocoa-emacs* (and *is-a-mac* (eq window-system 'ns)))
@@ -97,7 +96,7 @@ in `exec-path', or nil if no such command exists"
 (when *is-a-mac*
   (eval-after-load "woman"
     '(setq woman-manpath (append (list "/opt/local/man") woman-manpath)))
-  (dolist (dir (mapcar 'expand-file-name '("/usr/local/bin" "/opt/local/bin"
+  (dolist (dir (mapcar 'expand-file-name '("~/.cabal/bin" "/usr/local/bin" "/opt/local/bin"
                                            "/opt/local/lib/postgresql84/bin" "~/bin")))
     (setenv "PATH" (concat dir ":" (getenv "PATH")))
     (setq exec-path (append (list dir) exec-path))))
@@ -196,6 +195,7 @@ in `exec-path', or nil if no such command exists"
 ;;----------------------------------------------------------------------------
 (when *is-a-mac*
   (setq mac-command-modifier 'meta)
+  (setq mac-option-modifier 'none)
   (setq default-input-method "MacOSX")
   ;; Make mouse wheel / trackpad scrolling less jerky
   (setq mouse-wheel-scroll-amount '(0.001))
@@ -477,18 +477,6 @@ in `exec-path', or nil if no such command exists"
 
 
 ;;----------------------------------------------------------------------------
-;; Yasnippet
-;;----------------------------------------------------------------------------
-(when *snippet-support-enabled*
-  (require 'yasnippet)
-  ;; Don't map TAB to yasnippet
-  ;; In fact, set it to something we'll never use because we'll only ever trigger it indirectly.
-  (setq yas/trigger-key (kbd "C-c <kp-multiply>"))
-  (yas/initialize)
-  (yas/load-directory (concat (directory-of-library "yasnippet") "snippets")))
-
-
-;;----------------------------------------------------------------------------
 ;; Autocomplete
 ;;----------------------------------------------------------------------------
 (require 'auto-complete nil t)
@@ -517,6 +505,12 @@ in `exec-path', or nil if no such command exists"
   (define-key ac-complete-mode-map (kbd "C-n") 'dabbrev-expand)
   (define-key ac-complete-mode-map (kbd "C-p") 'dabbrev-expand)
   (define-key ac-complete-mode-map viper-ESC-key 'viper-intercept-ESC-key))
+
+;; Exclude very large buffers from dabbrev
+(defun smp-dabbrev-friend-buffer (other-buffer)
+  (< (buffer-size other-buffer) (* 1 1024 1024)))
+
+(setq dabbrev-friend-buffer-function 'smp-dabbrev-friend-buffer)
 
 
 ;;----------------------------------------------------------------------------
