@@ -40,8 +40,7 @@
 
 (eval-after-load "org"
   '(progn
-     (require 'org-clock)
-     (require 'org-checklist)))
+     (require 'org-clock)))
 
 
 (provide 'init-org)
