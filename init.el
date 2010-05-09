@@ -15,7 +15,7 @@
 (setq *rails-support-enabled* t)
 (setq *spell-check-support-enabled* t)
 (setq *byte-code-cache-enabled* nil)
-(setq *twitter-support-enabled* nil)
+(setq *twitter-support-enabled* t)
 (setq *is-a-mac* (eq system-type 'darwin))
 (setq *is-carbon-emacs* (and *is-a-mac* (eq window-system 'mac)))
 (setq *is-cocoa-emacs* (and *is-a-mac* (eq window-system 'ns)))
