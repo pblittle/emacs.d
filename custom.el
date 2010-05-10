@@ -43,7 +43,7 @@
  '(inhibit-startup-screen t)
  '(make-backup-files nil)
  '(mouse-yank-at-point t)
- '(org-agenda-files (quote ("~/Documents/general.org" "~/Projects/rails-runit/TODO" "~/.emacs.d/TODO" "~/Projects/racetempo.org" "~/Projects/autoscout/as24.org" "~/Projects/looktothestars-admin/ltts.org" "~/Projects/sproglogs-admin/sproglogs.org")))
+ '(org-agenda-files (quote ("~/org/todo.org", "~/org/jrs.org", "~/org/dc.org")))
  '(org-agenda-include-diary t)
  '(org-agenda-ndays 14)
  '(org-agenda-window-setup (quote current-window))
