@@ -1,5 +1,3 @@
-(setq load-path (cons "~/.emacs.d/site-lisp/org-mode/lisp" load-path))
-(setq load-path (cons "~/.emacs.d/site-lisp/org-mode/contrib/lisp" load-path))
 (define-key global-map "\C-cl" 'org-store-link)
 (define-key global-map "\C-ca" 'org-agenda)
 (add-to-list 'auto-mode-alist '("\\.org$" . org-mode))
@@ -38,9 +36,46 @@
 ;; Removes clocked tasks with 0:00 duration
 (setq org-clock-out-remove-zero-time-clocks t)
 
+;; Show iCal calendars in the org agenda
+(when *is-a-mac*
+  (eval-after-load "org"
+    '(if *is-a-mac* (require 'org-mac-iCal)))
+  (setq org-agenda-include-diary t)
+
+  (setq org-agenda-custom-commands
+        '(("I" "Import diary from iCal" agenda ""
+           ((org-agenda-mode-hook
+             (lambda ()
+               (org-mac-iCal)))))))
+
+  (add-hook 'org-agenda-cleanup-fancy-diary-hook
+            (lambda ()
+              (goto-char (point-min))
+              (save-excursion
+                (while (re-search-forward "^[a-z]" nil t)
+                  (goto-char (match-beginning 0))
+                  (insert "0:00-24:00 ")))
+              (while (re-search-forward "^ [a-z]" nil t)
+                (goto-char (match-beginning 0))
+                (save-excursion
+                  (re-search-backward "^[0-9]+:[0-9]+-[0-9]+:[0-9]+ " nil t))
+                (insert (match-string 0)))))
+  )
+
+
 (eval-after-load "org"
   '(progn
+<<<<<<< HEAD
      (require 'org-clock)))
+=======
+     (require 'org-clock)
+     (require 'org-checklist)
+     (require 'org-fstree)
+     (require 'org-google-weather)))
+>>>>>>> 028244d9c782e2e3ea6cf8d0afa6c60c1882233e
 
+(setq org-google-weather-cache-time 7200
+      org-google-weather-display-icon-p t
+      org-google-weather-icon-directory (expand-file-name "~/.emacs.d/site-lisp/google-weather-icons"))
 
 (provide 'init-org)

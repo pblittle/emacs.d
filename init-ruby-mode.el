@@ -3,7 +3,7 @@
 (setq interpreter-mode-alist
       (cons '("ruby" . ruby-mode) interpreter-mode-alist))
 
-(add-auto-mode 'ruby-mode "\\.rb$" "Rakefile$" "\.rake$" "\.rxml$" "\.rjs" ".irbrc" "\.builder")
+(add-auto-mode 'ruby-mode "\\.rb$" "Rakefile$" "\.rake$" "\.rxml$" "\.rjs$" ".irbrc$" "\.builder$" "\.ru$" "Gemfile$")
 
 
 (autoload 'run-ruby "inf-ruby" "Run an inferior Ruby process")
@@ -26,21 +26,11 @@
 
 
 ;;----------------------------------------------------------------------------
-;; Ruby - Electric mode
-;;----------------------------------------------------------------------------
-(autoload 'ruby-electric-mode "ruby-electric" "Electric brackes/quotes/keywords for Ruby source" t)
-(require 'rcodetools)
-(setq ruby-electric-expand-delimiters-list nil)  ; Only use ruby-electric for adding 'end'
-(add-hook 'ruby-mode-hook
-          (lambda () (ruby-electric-mode t)))
-
-
-;;----------------------------------------------------------------------------
 ;; Ruby - misc
 ;;----------------------------------------------------------------------------
 ;; For some unknown reason, viper starts off in insert mode inside ruby-mode buffers
-(when *vi-emulation-support-enabled*
-  (add-to-list 'viper-vi-state-mode-list 'ruby-mode))
+(eval-after-load "viper"
+  '(add-to-list 'viper-vi-state-mode-list 'ruby-mode))
 
 (setq compile-command "rake ")
 
@@ -78,19 +68,6 @@
 
 
 ;;----------------------------------------------------------------------------
-;; Ruby - haml & sass
-;;----------------------------------------------------------------------------
-(add-auto-mode 'haml-mode "\.haml$")
-(add-auto-mode 'sass-mode "\.sass$")
-(autoload 'haml-mode "haml-mode" "Mode for editing haml files" t)
-(autoload 'sass-mode "sass-mode" "Mode for editing sass files" t)
-
-(require 'flymake-haml)
-(add-hook 'haml-mode-hook 'flymake-haml-load)
-(add-hook 'sass-mode-hook 'flymake-sass-load)
-
-
-;;----------------------------------------------------------------------------
 ;; Ruby - compilation
 ;;----------------------------------------------------------------------------
 
@@ -103,5 +80,8 @@
 
 (add-hook 'ruby-mode-hook (lambda () (local-set-key [f6] 'recompile)))
 
+
+(autoload 'yaml-mode "yaml-mode" "Major mode for YAML source")
+(add-auto-mode 'yaml-mode "\\.yml$")
 
 (provide 'init-ruby-mode)

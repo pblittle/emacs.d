@@ -2,8 +2,11 @@
 (ido-mode t)  ; use 'buffer rather than t to use only buffer switching
 (ido-everywhere t)
 (setq ido-enable-flex-matching t)
-(setq ido-use-filename-at-point t)
+(setq ido-use-filename-at-point nil)
 (setq ido-auto-merge-work-directories-length 0)
+
+;; Allow the same buffer to be open in different frames
+(setq ido-default-buffer-method 'selected-window)
 
 (defun steve-ido-choose-from-recentf ()
   "Use ido to select a recently opened file from the `recentf-list'"
@@ -12,21 +15,14 @@
 (global-set-key [(meta f11)] 'steve-ido-choose-from-recentf)
 
 
+(require 'ido-hacks)
+
 ;;----------------------------------------------------------------------------
 ;; ido completion in M-x
 ;;----------------------------------------------------------------------------
-;; See http://www.emacswiki.org/cgi-bin/wiki/InteractivelyDoThings#toc5
-(defun ido-execute ()
-  (interactive)
-  (call-interactively
-   (intern
-    (ido-completing-read
-     "M-x "
-     (let (cmd-list)
-       (mapatoms (lambda (S) (when (commandp S) (setq cmd-list (cons (format "%S" S) cmd-list)))))
-       cmd-list)))))
-
-(global-set-key "\M-x" 'ido-execute)
+(require 'smex)
+(smex-initialize)
+(global-set-key "\M-x" 'smex)
 
 
 (provide 'init-ido)

@@ -23,10 +23,12 @@
 (setq js2-use-font-lock-faces t)
 (setq js2-mode-must-byte-compile nil)
 (setq js2-basic-offset preferred-javascript-indent-level)
-
+(setq js2-indent-on-enter-key t)
+(setq js2-auto-indent-p t)
+(unless *vi-emulation-support-enabled*
+  (setq js2-mirror-mode t))
 
 ;; js-mode
-(autoload 'js-mode "js" "An enhanced version of javascript-mode")
 (setq js-indent-level preferred-javascript-indent-level)
 
 
@@ -72,6 +74,11 @@
              (local-set-key "\C-c\C-b" 'js-send-buffer-and-go)
              (local-set-key "\C-cl" 'js-load-file-and-go)
              ))
+
+(autoload 'inferior-moz-mode "moz" "MozRepl Inferior Mode" t)
+(autoload 'moz-minor-mode "moz" "MozRepl Minor Mode" t)
+(defun javascript-moz-setup () (moz-minor-mode 1))
+(add-hook preferred-javascript-mode-hook 'javascript-moz-setup)
 
 
 (provide 'init-javascript)
